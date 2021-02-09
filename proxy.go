@@ -1,5 +1,7 @@
 package main
 
+import "sync"
+
 type UserCluster struct {
 	Username    string
 	ClusterName string
@@ -10,18 +12,30 @@ type UserCluster struct {
 type UserClusters struct {
 	cacheByToken       map[string]*UserCluster // by token hash
 	cacheByUserCluster map[string]*UserCluster // by userCluster hash
+	mu                 sync.RWMutex
 }
 
 func (c *UserClusters) Url(token string) (string, error) {
-	userCluster, ok := c.cacheByToken[tokenHash(token)]
-	if ok {
-		return userCluster.ApiURL, nil
+	apiUrl := c.url(token)
+	if apiUrl != nil {
+		return *apiUrl, nil
 	}
 	userCluster, err := c.loadCluster(token)
 	if err != nil {
 		return "", err
 	}
 	return userCluster.ApiURL, nil
+}
+
+func (c *UserClusters) url(token string) *string {
+	th := tokenHash(token)
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	userCluster, ok := c.cacheByToken[th]
+	if ok {
+		return &userCluster.ApiURL
+	}
+	return nil
 }
 
 func (c *UserClusters) loadCluster(token string) (*UserCluster, error) {
@@ -34,6 +48,9 @@ func (c *UserClusters) loadCluster(token string) (*UserCluster, error) {
 
 	// Cleanup existing cached tokens user clusters if any
 	ucHash := userClusterHash(username, apiUrl)
+	th := tokenHash(token)
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	userCluster, ok := c.cacheByUserCluster[ucHash]
 	if ok {
 		c.cacheByToken[userCluster.TokenHash] = nil
@@ -45,7 +62,7 @@ func (c *UserClusters) loadCluster(token string) (*UserCluster, error) {
 		Username:    username,
 		ClusterName: clusterName,
 		ApiURL:      apiUrl,
-		TokenHash:   tokenHash(token),
+		TokenHash:   th,
 	}
 	c.cacheByToken[userCluster.TokenHash] = userCluster
 	c.cacheByUserCluster[ucHash] = userCluster
