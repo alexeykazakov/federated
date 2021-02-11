@@ -22,7 +22,7 @@ const (
 	SERVER1 = "https://api.sandbox.x8i5.p1.openshiftapps.com:6443"
 	SERVER2 = "https://www.facebook.com"
 	SERVER3 = "https://www.yahoo.com"
-	PORT    = "6443"
+	PORT    = "8080"
 )
 
 // Serve a reverse proxy for a given url
@@ -77,6 +77,7 @@ func main() {
 	////http.HandleFunc("/hello", HelloServer)
 
 	// listen concurrently to allow for graceful shutdown
+	log.Info(nil, "Starting a server...")
 	srv := &http.Server{Addr: ":" + PORT, Handler: nil}
 	go func() {
 		//return server.ListenAndServeTLS("server.crt", "server.key")

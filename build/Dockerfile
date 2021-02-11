@@ -16,6 +16,6 @@ RUN  /usr/local/bin/user_setup
 
 ENTRYPOINT ["/usr/local/bin/proxy"]
 
-EXPOSE 6443
+EXPOSE 8080
 
 USER ${USER_UID}

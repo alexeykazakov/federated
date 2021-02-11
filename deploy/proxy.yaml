@@ -23,7 +23,7 @@ objects:
             - name: proxy
               image: ${IMAGE}
               ports:
-                - containerPort: 6443
+                - containerPort: 8080
               command:
                 - proxy
               imagePullPolicy: IfNotPresent
@@ -36,10 +36,10 @@ objects:
         run: proxy
     spec:
       ports:
-        - name: "6443"
+        - name: "8080"
           protocol: TCP
-          port: 6443
-          targetPort: 6443
+          port: 80
+          targetPort: 8080
       selector:
         run: proxy
       type: ClusterIP
@@ -54,7 +54,7 @@ objects:
     spec:
       host: ''
       port:
-        targetPort: "6443"
+        targetPort: "8080"
       to:
         kind: Service
         name: proxy
