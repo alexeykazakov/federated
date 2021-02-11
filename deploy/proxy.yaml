@@ -24,6 +24,7 @@ objects:
               image: ${IMAGE}
               ports:
                 - containerPort: 8080
+                - containerPort: 8081
               command:
                 - proxy
               imagePullPolicy: IfNotPresent
@@ -58,6 +59,41 @@ objects:
       to:
         kind: Service
         name: proxy
+        weight: 100
+      tls:
+        termination: edge
+      wildcardPolicy: None
+  - kind: Service
+    apiVersion: v1
+    metadata:
+      name: api
+      namespace: ${NAMESPACE}
+      labels:
+        run: proxy
+    spec:
+      ports:
+        - name: "8081"
+          protocol: TCP
+          port: 80
+          targetPort: 8081
+      selector:
+        run: proxy
+      type: ClusterIP
+      sessionAffinity: null
+  - kind: Route
+    apiVersion: v1
+    metadata:
+      labels:
+        run: proxy
+      name: api
+      namespace: ${NAMESPACE}
+    spec:
+      host: ''
+      port:
+        targetPort: "8081"
+      to:
+        kind: Service
+        name: api
         weight: 100
       tls:
         termination: edge

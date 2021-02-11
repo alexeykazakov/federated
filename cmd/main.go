@@ -22,7 +22,7 @@ const (
 	SERVER1 = "https://api.sandbox.x8i5.p1.openshiftapps.com:6443"
 	SERVER2 = "https://www.facebook.com"
 	SERVER3 = "https://www.yahoo.com"
-	PORT    = "8080"
+	PORT    = "8081"
 )
 
 // Serve a reverse proxy for a given url
@@ -67,22 +67,51 @@ func handleRequestAndRedirect(res http.ResponseWriter, req *http.Request) {
 	serveReverseProxy(url, res, req)
 }
 
+func createServer(name string, port int) *http.Server {
+
+	// create `ServerMux`
+	mux := http.NewServeMux()
+
+	// create a default route handler
+	mux.HandleFunc("/", func(res http.ResponseWriter, req *http.Request) {
+		fmt.Fprint(res, "Hello: "+name)
+	})
+
+	// create new server
+	server := http.Server{
+		Addr:    fmt.Sprintf(":%v", port), // :{port}
+		Handler: mux,
+	}
+
+	// return new server (pointer)
+	return &server
+}
+
 func main() {
 	log.Init("proxy-service")
 
+	// Just a side car:
+	go func() {
+		log.Info(nil, "Starting a side car...")
+		server := createServer("side car", 8080)
+		fmt.Println(server.ListenAndServe())
+	}()
+
 	// start server
-	http.HandleFunc("/", handleRequestAndRedirect)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", handleRequestAndRedirect)
+	//http.HandleFunc("/", handleRequestAndRedirect)
 
 	//log.Fatal(http.ListenAndServe(":"+PORT, nil))
 	////http.HandleFunc("/hello", HelloServer)
 
 	// listen concurrently to allow for graceful shutdown
 	log.Info(nil, "Starting a server...")
-	srv := &http.Server{Addr: ":" + PORT, Handler: nil}
+	srv := &http.Server{Addr: ":" + PORT, Handler: mux}
 	go func() {
 		//return server.ListenAndServeTLS("server.crt", "server.key")
 		if err := srv.ListenAndServe(); err != nil {
-			log.Error(nil, err, err.Error())
+			panic(err)
 		}
 	}()
 
