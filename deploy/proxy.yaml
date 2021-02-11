@@ -1,0 +1,71 @@
+kind: Template
+apiVersion: v1
+metadata:
+  name: proxy
+objects:
+  - kind: Deployment
+    apiVersion: apps/v1
+    metadata:
+      name: proxy
+      namespace: ${NAMESPACE}
+    spec:
+      replicas: ${{REPLICAS}}
+      selector:
+        matchLabels:
+          name: proxy
+      template:
+        metadata:
+          labels:
+            name: proxy
+            run: proxy
+        spec:
+          containers:
+            - name: proxy
+              image: ${IMAGE}
+              ports:
+                - containerPort: 6443
+              command:
+                - proxy
+              imagePullPolicy: IfNotPresent
+  - kind: Service
+    apiVersion: v1
+    metadata:
+      name: proxy
+      namespace: ${NAMESPACE}
+      labels:
+        run: proxy
+    spec:
+      ports:
+        - name: "6443"
+          protocol: TCP
+          port: 6443
+          targetPort: 6443
+      selector:
+        run: proxy
+      type: ClusterIP
+      sessionAffinity: null
+  - kind: Route
+    apiVersion: v1
+    metadata:
+      labels:
+        run: proxy
+      name: proxy
+      namespace: ${NAMESPACE}
+    spec:
+      host: ''
+      port:
+        targetPort: "6443"
+      to:
+        kind: Service
+        name: proxy
+        weight: 100
+      tls:
+        termination: edge
+      wildcardPolicy: None
+parameters:
+  - name: NAMESPACE
+    value: 'proxy'
+  - name: IMAGE
+    value: quay.io/alexeykazakov/proxy:latest
+  - name: REPLICAS
+    value: '1'
